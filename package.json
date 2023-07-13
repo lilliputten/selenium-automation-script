@@ -1,15 +1,31 @@
 {
   "name": "bobby-script",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "",
-  "main": "automation-script-01.js",
-  "scripts": {
-    "run": "node automation-script-01.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
+  "changed": "2023.07.14, 02:02",
+  "main": "automation-script.js",
+  "author": "Lilliputten <lilliputten@gmail.com>",
+  "license": "MIT",
   "dependencies": {
     "selenium-webdriver": "^4.10.0"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.22.5",
+    "@babel/plugin-proposal-decorators": "^7.22.5",
+    "@babel/preset-env": "^7.22.5",
+    "eslint": "^8.44.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-json": "^3.1.0",
+    "eslint-plugin-jsonc": "^2.9.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-yaml": "^0.5.0",
+    "prettier": "^2.8.8"
+  },
+  "scripts": {
+    "prettier": "echo --Run prettier-- && prettier --write --cache . | grep -v '(cached)' || true",
+    "lint": "echo --Lint sources-- && eslint src --ext ts --ext tsx --ext js",
+    "start": "echo --Start script-- && node automation-script.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

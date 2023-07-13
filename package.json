@@ -4,8 +4,12 @@
   "description": "",
   "main": "automation-script-01.js",
   "scripts": {
+    "run": "node automation-script-01.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "selenium-webdriver": "^4.10.0"
+  }
 }

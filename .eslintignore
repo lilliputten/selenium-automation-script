@@ -11,16 +11,10 @@
 /.next
 /.storybook
 /.vscode
-/build*
 /coverage
 /.idea
 /i18n
 /node_modules
-/public
-/public-src
-/publish
-/types
-/utils
 
 # Log files
 

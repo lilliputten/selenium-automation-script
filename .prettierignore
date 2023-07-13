@@ -9,16 +9,7 @@
 /build
 /coverage
 /idea
-/i18n
 /node_modules
-/public
-/public-src
-/publish
-/types
-/utils
 
 package-lock.*
 **/*_
-
-# Generated
-/src/core/global/css-params-generated.*

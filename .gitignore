@@ -1,24 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-# changed 2023.03.01, 14:27
+# @changed 2023.07.14, 02:12
 
 # dependencies
 /node_modules
 /.pnp
 .pnp.js
 .gitmodules
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# publish submodule
-/publish*
 
 # misc
 .DS_Store
@@ -33,31 +20,13 @@ yarn-error.log*
 # local env files
 .env*.local
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# local env & config override files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-utils/config-local.sh
-
 # Dev-cycle files
 *.session
 *.session-tabs
 *crashed-session*
 tsconfig.tsbuildinfo
 
-# Generated files...
-# /src/core/global/css-params-generated.*
-
 # Temporariy, swap, log & ignored files
-.git-rename-and-replace.log
 *UNUSED
 *_
 *~
@@ -66,7 +35,6 @@ tsconfig.tsbuildinfo
 *.zip
 *.tgz
 *.log
-~$*.doc
 *crashed-session*
 
 # Git conflicts

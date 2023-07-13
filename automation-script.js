@@ -1,4 +1,4 @@
-const { processData } = require('./routines.js');
+const { processData } = require('./src/routines.js');
 
 // Start the process...
 processData();

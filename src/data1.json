@@ -13,20 +13,6 @@
       "AdressOnATO": "need to save",
       "SuperMember": "id",
       "Email": "email@domain.com"
-    },
-    {
-      "cFirstName": "FRANCISKO BAREND",
-      "cSurname": "DU PLESSIS",
-      "dDateOfBirth": "1957-12-18",
-      "cAddress1": "48 Monivae Circuit",
-      "cAddress2": "Eagleby",
-      "cPostCode": "4207",
-      "cTelephone2": "0472880786",
-      "cTFN": "892763917",
-      "ACCNUM": "HASTOBE9DIGITS",
-      "AdressOnATO": "need to save",
-      "SuperMember": "id",
-      "Email": "email"
     }
   ]
 }

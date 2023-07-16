@@ -1,17 +1,20 @@
 /* eslint-disable no-console */
 
-const { Builder, Browser, By } = require('selenium-webdriver');
+const { Key, Builder, Browser, By } = require('selenium-webdriver');
 
 const {
-  // waitPromise,
+  // prettier-ignore
+  waitPromise,
   scrollToElement,
   clickCheckbox,
   setSelect,
+  clickRadioGroupItem,
 } = require('./utils.js'); // Some utils (unused)
 
 const {
   // Debug mode
   isDebug,
+  debugOmitOtherFields,
 
   // Fields' elements...
   elements,
@@ -55,9 +58,9 @@ function prepareDataValue(dataId, value) {
 }
 
 async function processDataFieldByXPath(driver, dataId, xPath, value) {
+  const elData = elements[dataId];
+  const { click, clear, optional } = elData;
   try {
-    const elData = elements[dataId];
-    const { click, clear } = elData;
     const preparedValue = prepareDataValue(dataId, value);
     const valueLogStr =
       '"' + value + '"' + (preparedValue !== value ? ' ("' + preparedValue + '")' : '');
@@ -69,7 +72,7 @@ async function processDataFieldByXPath(driver, dataId, xPath, value) {
     console.log('Element "' + dataId + '" found! Trying to fill it...');
     // Scroll to the element...
     // await driver.executeScript('arguments[0].scrollIntoView(true);', el);
-    await scrollToElement(driver, el);
+    await scrollToElement(driver, el, optional);
     // Click...
     if (defaultClick || click) {
       await el.click();
@@ -82,9 +85,13 @@ async function processDataFieldByXPath(driver, dataId, xPath, value) {
     await el.sendKeys(preparedValue);
     console.log('Element "' + dataId + '" has filled with value "' + preparedValue + '"');
   } catch (err) {
-    console.error('[processDataField]', err);
-    debugger; // eslint-disable-line no-debugger
-    throw err; // Re-throw...
+    if (optional) {
+      console.log('[processDataField]', err);
+    } else {
+      console.error('[processDataField]', err);
+      debugger; // eslint-disable-line no-debugger
+      throw err; // Re-throw...
+    }
   }
 }
 
@@ -134,9 +141,43 @@ async function selectGender(driver, _dataItem) {
   }
 }
 
-async function clickManualAddressCheckbox(driver) {
-  const xPath = '//input[@type="checkbox" and @value="manualInput"]/following-sibling::label';
-  await clickCheckbox(driver, xPath);
+/* // UNUSED: clickManualAddressCheckbox
+ * async function clickManualAddressCheckbox(driver) {
+ *   const xPath = '//input[@type="checkbox" and @value="manualInput"]/following-sibling::label';
+ *   await clickCheckbox(driver, xPath);
+ * }
+ */
+
+// Fill address field...
+async function fillComplexAddress(driver, dataItem) {
+  try {
+    const { cAddress1, cAddress2 } = dataItem;
+    // Eg: value = 586 Stockleigh Road Stockleigh
+    const value = [cAddress1, cAddress2].join(' ');
+    console.log('[fillComplexAddress]: Trying to fill complex address field with data:', value);
+    const xPath = '//div[contains(@class, "AddressAutocompleteContainer")]//input[@type="text"]';
+    const el = await driver.findElement(By.xpath(xPath));
+    await scrollToElement(driver, el);
+    // await driver.executeScript('arguments[0].setAttribute("style", "border: 3px solid green")', el); // DEBUG
+    console.log('[fillComplexAddress]: Node found, trying to fill with data:', value, {
+      cAddress1,
+      cAddress2,
+      dataItem,
+      xPath,
+      el,
+      Key,
+    });
+    await el.sendKeys(value);
+    // Wait some time to let the application to find some data in the internet
+    // TODO: To determine when the search is finished?
+    await waitPromise(1000);
+    // Send final enter
+    await el.sendKeys(Key.ENTER);
+  } catch (err) {
+    console.error('[fillComplexAddress]', err);
+    debugger; // eslint-disable-line no-debugger
+    throw err; // Re-throw...
+  }
 }
 
 // Click 'I authorise Hostplus' checkbox...
@@ -151,6 +192,21 @@ async function clickAgreeCheckbox(driver) {
   const xPath =
     '//input[@type="checkbox" and @name="termsServicePDSCheck"]/following-sibling::label';
   await clickCheckbox(driver, xPath);
+}
+
+// Click 'Would you like to have insurance cover?' radio group 'No' item...
+async function clickInsuranceCoverRadioGroupItem(driver) {
+  const radioGroupText = 'Would you like to have insurance cover?';
+  const radioGroupItemText = 'No';
+  try {
+    // prettier-ignore
+    // console.log('[clickInsuranceCoverRadioGroupItem] Trying to click radio group "' + radioGroupText + '" item "' + radioGroupItemText + '"');
+    await clickRadioGroupItem(driver, radioGroupText, radioGroupItemText);
+  } catch (err) {
+    console.error('[clickInsuranceCoverRadioGroupItem]', err);
+    debugger; // eslint-disable-line no-debugger
+    throw err; // Re-throw...
+  }
 }
 
 // Remove header...
@@ -170,9 +226,13 @@ async function removeHeader(driver) {
 async function atRecordStart(driver, dataItem) {
   console.log('Do tasks at record processing start:', dataItem);
   try {
-    await clickManualAddressCheckbox(driver);
-    await selectTitle(driver, dataItem);
-    await selectGender(driver, dataItem);
+    await clickInsuranceCoverRadioGroupItem(driver);
+    if (!debugOmitOtherFields) {
+      // await clickManualAddressCheckbox(driver);
+      // Gender-dependent fields (it's possible to get and fill them from input data)...
+      await selectTitle(driver, dataItem);
+      await selectGender(driver, dataItem);
+    }
   } catch (err) {
     console.error('[atRecordStart]', err);
     debugger; // eslint-disable-line no-debugger
@@ -183,8 +243,11 @@ async function atRecordStart(driver, dataItem) {
 async function atRecordEnd(driver, dataItem) {
   console.log('Do tasks at record processing start:', dataItem);
   try {
-    await clickAuthoriseCheckbox(driver);
-    await clickAgreeCheckbox(driver);
+    await fillComplexAddress(driver, dataItem);
+    if (!debugOmitOtherFields) {
+      await clickAuthoriseCheckbox(driver);
+      await clickAgreeCheckbox(driver);
+    }
   } catch (err) {
     console.error('[atRecordEnd]', err);
     debugger; // eslint-disable-line no-debugger
@@ -205,7 +268,9 @@ async function processRecord(dataItem) {
     await removeHeader(driver);
     // Waiting until the content has rendered...
     const testXPathValue = Array.isArray(testXPath) ? testXPath[0] : testXPath;
-    await driver.wait(() => driver.findElements(By.xpath(testXPathValue)), 5000);
+    if (testXPathValue) {
+      await driver.wait(() => driver.findElements(By.xpath(testXPathValue)), 5000);
+    }
     console.log('Content is ready.');
     // Start...
     await atRecordStart(driver, dataItem);

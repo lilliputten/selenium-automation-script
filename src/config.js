@@ -1,9 +1,13 @@
+// DEBUG: Debug mode (only for developing purposes)
+const isDebug = true;
+
 // XPath matchers for fields...
 const elements = {
   cFirstName: {
     // 'FRANCISKO BAREND'
     xPath: '//input[contains(@id, ".first-name")]',
   },
+  /* // XXX
   cSurname: {
     // 'DU PLESSIS'
     xPath: '//input[contains(@id, ".last-name")]',
@@ -12,17 +16,10 @@ const elements = {
     // '1957-12-18' -> '18/12/1957' (see `prepareDataValue` function below)
     xPath: '//input[contains(@id, ".date-of-birth")]',
   },
-  cAddress1: {
-    // '48 Monivae Circuit'
-    xPath: '//input[@name="postalAddress.addressLine1"]',
-  },
-  cAddress2: {
-    // 'Eagleby'
-    xPath: '//input[@name="postalAddress.addressLine2"]',
-  },
   cPostCode: {
     // '4207'
     xPath: '//input[@name="postalAddress.postCode"]',
+    optional: true,
   },
   cTelephone2: {
     // '0472880786' -> '472880786' (remove leading zero in prepareDataValue)
@@ -34,7 +31,32 @@ const elements = {
     xPath: '//input[contains(@id, ".tfn-prompt")]',
     clear: true,
   },
-  /*
+  Email: {
+    // 'email@domain.com'
+    xPath: [
+      '//input[contains(@id, ".email-address")]',
+      '//input[contains(@id, ".confirm-email-address")]',
+    ],
+  },
+  */
+  /* // UNUSED: Address data, used complex method `fillComplexAddressa
+  <input autocapitalize="none" autocomplete="off" autocorrect="off"
+    id="postalAddress-AddressAutocomplete" spellcheck="false" tabindex="0"
+    type="text" aria-autocomplete="list" style="box-sizing: content-box; width:
+    2px; background: 0px center; border: 0px none; font-size: inherit; opacity:
+    1; outline: 0px; padding: 0px; color: inherit;" value="">
+  586 Stockleigh Road Stockleigh
+
+  cAddress1: {
+    // '48 Monivae Circuit'
+    xPath: '//input[@name="postalAddress.addressLine1"]',
+  },
+  cAddress2: {
+    // 'Eagleby'
+    xPath: '//input[@name="postalAddress.addressLine2"]',
+  },
+  */
+  /* // NOTE: Unused fields:
   ACCNUM: {
     // 'HASTOBE9DIGITS'
     xPath: '//input[contains(@id, ".")]',
@@ -48,21 +70,15 @@ const elements = {
     xPath: '//input[contains(@id, ".")]',
   },
   */
-  Email: {
-    // 'email@domain.com'
-    xPath: [
-      '//input[contains(@id, ".email-address")]',
-      '//input[contains(@id, ".confirm-email-address")]',
-    ],
-  },
 };
 
 // First random element's xpath (to detect document readyness status)...
-const testXPath = Object.values(elements)[0].xPath;
+const testXPath = Object.values(elements)[0]?.xPath || '//input[contains(@id, ".first-name")]';
 
 module.exports = {
-  // Debug mode
-  isDebug: true,
+  // DEBUG: Debug mode (only for developing purposes)
+  isDebug,
+  debugOmitOtherFields: isDebug,
 
   // XPath matchers for fields...
   elements,

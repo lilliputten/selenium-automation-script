@@ -8,16 +8,18 @@ async function waitPromise(timeout) {
   });
 }
 
-async function scrollToElement(driver, el) {
+async function scrollToElement(driver, el, optional) {
   try {
     await driver.executeScript('arguments[0].scrollIntoView(true);', el);
   } catch (err) {
-    console.error('[utils:scrollToElement]: Can not scroll to element', {
-      driver,
-      el,
-      err,
-    });
-    debugger; // eslint-disable-line no-debugger
+    if (!optional) {
+      console.error('[utils:scrollToElement]: Can not scroll to element', {
+        driver,
+        el,
+        err,
+      });
+      debugger; // eslint-disable-line no-debugger
+    }
   }
 }
 
@@ -35,7 +37,7 @@ async function clickCheckbox(driver, xPath) {
 }
 
 async function setSelect(driver, titleXPath, value) {
-  console.log('Set select (' + titleXPath + '):', value);
+  console.log('Set select (' + titleXPath + '): start, value:', value);
   try {
     // Find and open parent select itself...
     const selectXPath =
@@ -56,9 +58,42 @@ async function setSelect(driver, titleXPath, value) {
   }
 }
 
+async function clickRadioGroupItem(driver, radioGroupText, radioGroupItemText) {
+  // Find wrapping label element...
+  const xPath =
+    '//div[text()="' +
+    radioGroupText +
+    '"]/following-sibling::div//span[text()="' +
+    radioGroupItemText +
+    '"]/../..';
+  try {
+    const el = await driver.findElement(By.xpath(xPath));
+    // prettier-ignore
+    console.log('[clickRadioGroupItem] Trying to click radio group "' + radioGroupText + '" item "' + radioGroupItemText + '"', {
+      radioGroupText,
+      radioGroupItemText,
+      xPath,
+      el,
+    });
+    // debugger;
+    await scrollToElement(driver, el);
+    await driver.executeScript('arguments[0].setAttribute("style", "border: 3px solid red")', el); // DEBUG
+    await el.click();
+  } catch (err) {
+    console.error('[clickRadioGroupItem]', err, {
+      radioGroupText,
+      radioGroupItemText,
+      xPath,
+    });
+    debugger; // eslint-disable-line no-debugger
+    throw err; // Re-throw...
+  }
+}
+
 module.exports = {
   waitPromise,
   scrollToElement,
   clickCheckbox,
   setSelect,
+  clickRadioGroupItem,
 };

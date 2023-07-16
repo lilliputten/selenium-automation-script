@@ -8,6 +8,7 @@ const elements = {
     xPath: '//input[contains(@id, ".first-name")]',
   },
   /* // XXX
+   */
   cSurname: {
     // 'DU PLESSIS'
     xPath: '//input[contains(@id, ".last-name")]',
@@ -15,11 +16,6 @@ const elements = {
   dDateOfBirth: {
     // '1957-12-18' -> '18/12/1957' (see `prepareDataValue` function below)
     xPath: '//input[contains(@id, ".date-of-birth")]',
-  },
-  cPostCode: {
-    // '4207'
-    xPath: '//input[@name="postalAddress.postCode"]',
-    optional: true,
   },
   cTelephone2: {
     // '0472880786' -> '472880786' (remove leading zero in prepareDataValue)
@@ -38,8 +34,7 @@ const elements = {
       '//input[contains(@id, ".confirm-email-address")]',
     ],
   },
-  */
-  /* // UNUSED: Address data, used complex method `fillComplexAddressa
+  /* // UNUSED: Address data, used complex method `fillComplexAddress`
   <input autocapitalize="none" autocomplete="off" autocorrect="off"
     id="postalAddress-AddressAutocomplete" spellcheck="false" tabindex="0"
     type="text" aria-autocomplete="list" style="box-sizing: content-box; width:
@@ -47,6 +42,11 @@ const elements = {
     1; outline: 0px; padding: 0px; color: inherit;" value="">
   586 Stockleigh Road Stockleigh
 
+  cPostCode: {
+    // '4207'
+    xPath: '//input[@name="postalAddress.postCode"]',
+    optional: true,
+  },
   cAddress1: {
     // '48 Monivae Circuit'
     xPath: '//input[@name="postalAddress.addressLine1"]',
@@ -78,13 +78,17 @@ const testXPath = Object.values(elements)[0]?.xPath || '//input[contains(@id, ".
 module.exports = {
   // DEBUG: Debug mode (only for developing purposes)
   isDebug,
-  debugOmitOtherFields: isDebug,
+  // debugOmitOtherFields: isDebug, // Omit some fields for debugging purposes
+
+  // Generic behavior (mostly for debug purposes)...
+  closeWindowWhenFinished: !isDebug, // Don't close browser window with filled form
+  clickNextButton: !isDebug, // Click 'Next' button when form has filled
 
   // XPath matchers for fields...
   elements,
 
   // XPath of item to detect page ready status...
-  testXPath, // : Object.values(elements)[0].xpath,
+  testXPath,
 
   // Json data file. Expecting scheme `{ list: [ ... ] } `
   dataFileName: './data1.json',
@@ -96,7 +100,10 @@ module.exports = {
   windowWidth: 800, // 1024
   windowHeight: 600, // 768
 
-  // Behavior options...
+  // Attempts count to fill complex address field
+  attemptsToFillComplexAddress: 50,
+
+  // Behavior options (for `elements` items)...
   defaultClick: true,
   defaultClear: true,
 };

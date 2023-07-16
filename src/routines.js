@@ -3,18 +3,23 @@
 const { Key, Builder, Browser, By } = require('selenium-webdriver');
 
 const {
-  // prettier-ignore
   waitPromise,
   scrollToElement,
   clickCheckbox,
   setSelect,
   clickRadioGroupItem,
+  debugHighlightElement,
+  getRandomAddressValue,
 } = require('./utils.js'); // Some utils (unused)
 
 const {
   // Debug mode
-  isDebug,
+  // isDebug,
   debugOmitOtherFields,
+
+  // Generic behavior...
+  closeWindowWhenFinished,
+  clickNextButton,
 
   // Fields' elements...
   elements,
@@ -35,6 +40,7 @@ const {
   // Behavior options...
   defaultClick,
   defaultClear,
+  attemptsToFillComplexAddress,
 } = require('./config.js');
 
 function prepareDataValue(dataId, value) {
@@ -64,14 +70,14 @@ async function processDataFieldByXPath(driver, dataId, xPath, value) {
     const preparedValue = prepareDataValue(dataId, value);
     const valueLogStr =
       '"' + value + '"' + (preparedValue !== value ? ' ("' + preparedValue + '")' : '');
-    console.log('Trying to fill the element "' + dataId + '" with value ' + valueLogStr);
+    // prettier-ignore
+    console.log('[processDataFieldByXPath] Trying to fill the element "' + dataId + '" with value ' + valueLogStr);
     const el = driver.findElement(By.xpath(xPath));
     if (!el) {
       throw new Error('No element defined for el');
     }
-    console.log('Element "' + dataId + '" found! Trying to fill it...');
+    console.log('[processDataFieldByXPath] Element "' + dataId + '" found! Trying to fill it...');
     // Scroll to the element...
-    // await driver.executeScript('arguments[0].scrollIntoView(true);', el);
     await scrollToElement(driver, el, optional);
     // Click...
     if (defaultClick || click) {
@@ -83,12 +89,13 @@ async function processDataFieldByXPath(driver, dataId, xPath, value) {
     }
     // Fill the field...
     await el.sendKeys(preparedValue);
-    console.log('Element "' + dataId + '" has filled with value "' + preparedValue + '"');
+    // prettier-ignore
+    console.log('[processDataFieldByXPath] Element "' + dataId + '" has filled with value "' + preparedValue + '"');
   } catch (err) {
     if (optional) {
-      console.log('[processDataField]', err);
+      console.log('[processDataField] Optional error:', err);
     } else {
-      console.error('[processDataField]', err);
+      console.error('[processDataField] Error:', err);
       debugger; // eslint-disable-line no-debugger
       throw err; // Re-throw...
     }
@@ -107,7 +114,7 @@ async function processDataField(driver, dataId, value) {
       await processDataFieldByXPath(driver, dataId, singleXPath, value);
     }
   } catch (err) {
-    console.error('[processDataField]', err);
+    console.error('[processDataField] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
@@ -121,7 +128,7 @@ async function selectTitle(driver, _dataItem) {
     const titleXPath = '//span[@data-target-id="title-label--target-id"]';
     await setSelect(driver, titleXPath, value);
   } catch (err) {
-    console.error('[selectTitle]', err);
+    console.error('[selectTitle] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
@@ -135,7 +142,7 @@ async function selectGender(driver, _dataItem) {
     const titleXPath = '//span[@data-target-id="gender-label--target-id"]';
     await setSelect(driver, titleXPath, value);
   } catch (err) {
-    console.error('[selectTitle]', err);
+    console.error('[selectTitle] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
@@ -149,32 +156,120 @@ async function selectGender(driver, _dataItem) {
  */
 
 // Fill address field...
-async function fillComplexAddress(driver, dataItem) {
+async function fillComplexAddressElementWithValue(driver, inputXPath, value) {
   try {
-    const { cAddress1, cAddress2 } = dataItem;
-    // Eg: value = 586 Stockleigh Road Stockleigh
-    const value = [cAddress1, cAddress2].join(' ');
-    console.log('[fillComplexAddress]: Trying to fill complex address field with data:', value);
-    const xPath = '//div[contains(@class, "AddressAutocompleteContainer")]//input[@type="text"]';
-    const el = await driver.findElement(By.xpath(xPath));
+    // TODO: Clear field
+    const el = await driver.findElement(By.xpath(inputXPath));
+    /* console.log('[fillComplexAddressElementWithValue] Trying to scroll to field', {
+     *   value,
+     *   inputXPath,
+     *   el,
+     * });
+     */
     await scrollToElement(driver, el);
-    // await driver.executeScript('arguments[0].setAttribute("style", "border: 3px solid green")', el); // DEBUG
-    console.log('[fillComplexAddress]: Node found, trying to fill with data:', value, {
-      cAddress1,
-      cAddress2,
-      dataItem,
-      xPath,
-      el,
-      Key,
-    });
+    console.log('[fillComplexAddressElementWithValue] Trying to fill with value:', value);
+    await el.clear();
+    // await waitPromise(5000);
     await el.sendKeys(value);
     // Wait some time to let the application to find some data in the internet
-    // TODO: To determine when the search is finished?
+    // TODO: To determine somehow (?) when the search is finished? (Try to found opened popup with options in document?)
+    // Send final enter and escape...
     await waitPromise(1000);
-    // Send final enter
+    // console.log('[fillComplexAddressElementWithValue] Sending enter');
     await el.sendKeys(Key.ENTER);
+    // Scroll back to retain element focus (it could be lost after value update)...
+    // console.log('[fillComplexAddressElementWithValue] Re-focusing');
+    await scrollToElement(driver, el);
+    try {
+      // Send escape to force update the field (don't throw error if it's impossible: it's optional)...
+      // console.log('[fillComplexAddressElementWithValue] Sending escape');
+      await el.sendKeys(Key.ESCAPE);
+    } catch (_e) {
+      // NOOP
+    }
   } catch (err) {
-    console.error('[fillComplexAddress]', err);
+    console.error('[fillComplexAddressElementWithValue] Error', err, {
+      value,
+      inputXPath,
+    });
+    debugger; // eslint-disable-line no-debugger
+    throw err; // Re-throw...
+  }
+}
+
+/** @return boolean */
+async function waitNonEmptyComplexAddressElement(driver, containerXPath) {
+  const valueXPath =
+    containerXPath +
+    '//div[contains(@class,"addressAutocomplete__single-value") and string-length(text()) > 0]';
+  try {
+    // prettier-ignore
+    console.log('[waitNonEmptyComplexAddressElement] Trying to find displayed found address element', {
+      valueXPath,
+    });
+    const result = await driver.wait(() => driver.findElement(By.xpath(valueXPath)), 1000);
+    console.log('[waitNonEmptyComplexAddressElement] Element successfully found', {
+      result,
+    });
+    // Element found
+    return true;
+  } catch (err) {
+    console.log('[waitNonEmptyComplexAddressElement] Element not found', {
+      err,
+      valueXPath,
+      containerXPath,
+    });
+    // debugger; // eslint-disable-line no-debugger
+    // Element not found
+    return false;
+  }
+}
+
+// Fill address field...
+async function fillComplexAddress(driver, dataItem) {
+  // Address field wrapper
+  const containerXPath = '//div[contains(@class,"AddressAutocompleteContainer")]';
+  // Input xpath
+  const inputXPath =
+    containerXPath + '//input[@type="text" and @id="postalAddress-AddressAutocomplete"]';
+  const { cAddress1, cAddress2, cPostCode } = dataItem;
+  // Let's try to fill field with real value at first...
+  // Eg: value = 586 Stockleigh Road Stockleigh
+  let value = [cAddress1, cAddress2, cPostCode].filter(Boolean).join(' ');
+  // let value = '12345'; // DEBUG: Check value for 'random addresses'
+  // let value = 'XXX'; // DEBUG: Check unsolvable address (should be choosed some random address)
+  try {
+    console.log('[fillComplexAddress] Trying to fill complex address field with data:', value, {
+      value,
+      cAddress1,
+      cAddress2,
+      cPostCode,
+    });
+    // Starting filling cycle: using real value for iteration and then if
+    // adrress couldn't be substituted automatically, will try to fill with
+    // random 'addresses' (see `getRandomAddressValue`).
+    let count = 0;
+    let result = false;
+    while (!result && count < attemptsToFillComplexAddress) {
+      if (count) {
+        // Not initial cycle: get random value
+        value = getRandomAddressValue();
+      }
+      count++;
+      console.log('[fillComplexAddress] Start iteration', count, '("' + value + '")');
+      await fillComplexAddressElementWithValue(driver, inputXPath, value);
+      result = await waitNonEmptyComplexAddressElement(driver, containerXPath);
+      // prettier-ignore
+      console.log('[fillComplexAddress] Check iteration', count, '("' + value + '") result:', result ? 'success' : 'failure');
+      // Else going to the next iteration...
+    }
+    if (!result) {
+      // Can't fill address: throw an error...
+      throw new Error('Can not fill the address field for ' + count + ' times');
+    }
+    // Else succesfully return
+  } catch (err) {
+    console.error('[fillComplexAddress] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
@@ -203,7 +298,7 @@ async function clickInsuranceCoverRadioGroupItem(driver) {
     // console.log('[clickInsuranceCoverRadioGroupItem] Trying to click radio group "' + radioGroupText + '" item "' + radioGroupItemText + '"');
     await clickRadioGroupItem(driver, radioGroupText, radioGroupItemText);
   } catch (err) {
-    console.error('[clickInsuranceCoverRadioGroupItem]', err);
+    console.error('[clickInsuranceCoverRadioGroupItem] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
@@ -212,56 +307,78 @@ async function clickInsuranceCoverRadioGroupItem(driver) {
 // Remove header...
 async function removeHeader(driver) {
   const xPath = '//div[starts-with(@class,"Headerstyle__HeaderWrapper")]';
-  console.log('removeHeader');
+  console.log('[removeHeader] Removing page header');
   try {
     const el = await driver.findElement(By.xpath(xPath));
     await driver.executeScript('arguments[0].remove();', el);
   } catch (err) {
-    console.error('[removeHeader]', err);
+    console.error('[removeHeader] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
 }
 
-async function atRecordStart(driver, dataItem) {
-  console.log('Do tasks at record processing start:', dataItem);
+async function atRecordProcessingStart(driver, dataItem) {
+  console.log('[atRecordProcessingStart] Do tasks at record processing start:', dataItem);
   try {
-    await clickInsuranceCoverRadioGroupItem(driver);
     if (!debugOmitOtherFields) {
-      // await clickManualAddressCheckbox(driver);
+      // await clickManualAddressCheckbox(driver); // UNUSED: Using automatic address field (`fillComplexAddress`)
       // Gender-dependent fields (it's possible to get and fill them from input data)...
       await selectTitle(driver, dataItem);
       await selectGender(driver, dataItem);
+      // Other fields...
+      await clickInsuranceCoverRadioGroupItem(driver);
+      await fillComplexAddress(driver, dataItem);
     }
   } catch (err) {
-    console.error('[atRecordStart]', err);
+    console.error('[atRecordProcessingStart] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
 }
 
-async function atRecordEnd(driver, dataItem) {
-  console.log('Do tasks at record processing start:', dataItem);
+async function atRecordProcessingEnd(driver, dataItem) {
+  console.log('[atRecordProcessingEnd] Do tasks at record processing start:', dataItem);
   try {
-    await fillComplexAddress(driver, dataItem);
     if (!debugOmitOtherFields) {
       await clickAuthoriseCheckbox(driver);
       await clickAgreeCheckbox(driver);
     }
   } catch (err) {
-    console.error('[atRecordEnd]', err);
+    console.error('[atRecordProcessingEnd] Error', err);
+    debugger; // eslint-disable-line no-debugger
+    throw err; // Re-throw...
+  }
+}
+
+async function findAndClickNextButton(driver) {
+  const xPath =
+    '//button[@type="submit" and contains(@data-target-id,"registration--form-button")]';
+  console.log('[findAndClickNextButton] Trying to find Next button...', {
+    xPath,
+  });
+  try {
+    const el = await driver.findElement(By.xpath(xPath));
+    await scrollToElement(driver, el);
+    if (clickNextButton) {
+      await el.click();
+    } else {
+      await debugHighlightElement(driver, el);
+    }
+  } catch (err) {
+    console.error('[findAndClickNextButton] Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   }
 }
 
 async function processRecord(dataItem) {
-  console.log('Trying to fill the data:', dataItem);
+  console.log('[processRecord] Trying to fill the data:', dataItem);
   // return await waitPromise(2000);
   const driver = await new Builder().forBrowser(Browser.FIREFOX).build();
   try {
     // TODO: To reuse single browser window?
-    console.log('Waiting for content to be ready...');
+    console.log('[processRecord] Waiting for content to be ready...');
     await driver.manage().window().setRect({ width: windowWidth, height: windowHeight });
     await driver.get(siteUrl);
     // Do initial tasks...
@@ -271,24 +388,25 @@ async function processRecord(dataItem) {
     if (testXPathValue) {
       await driver.wait(() => driver.findElements(By.xpath(testXPathValue)), 5000);
     }
-    console.log('Content is ready.');
+    console.log('[processRecord] Content is ready');
     // Start...
-    await atRecordStart(driver, dataItem);
-    console.log('Starting to fill the data...');
+    await atRecordProcessingStart(driver, dataItem);
+    console.log('[processRecord] Starting to fill the data...');
     // Start to fill the fields (synchronous)...
     for (const dataId of Object.keys(elements)) {
       const value = dataItem[dataId] || '';
       await processDataField(driver, dataId, value);
     }
     // Final actions..
-    await atRecordEnd(driver, dataItem);
+    await atRecordProcessingEnd(driver, dataItem);
+    await findAndClickNextButton(driver);
     // TODO: Find submit button and click it?
   } catch (err) {
-    console.error('[processRecord]', err);
+    console.error('[processRecord]: Error', err);
     debugger; // eslint-disable-line no-debugger
     throw err; // Re-throw...
   } finally {
-    if (!isDebug) {
+    if (closeWindowWhenFinished) {
       // NOTE: Don't close the browser if we want to show the results.
       await driver.quit();
     }
@@ -308,7 +426,7 @@ async function processData() {
      * dataList.forEach(processRecord);
      */
   } catch (err) {
-    console.error('[processData]', err);
+    console.error('[processData] Error:', err);
     debugger; // eslint-disable-line no-debugger
   }
 }

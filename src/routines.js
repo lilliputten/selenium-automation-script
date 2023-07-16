@@ -6,30 +6,25 @@ const {
   // Debug mode
   // isDebug,
   debugOmitOtherFields,
-
   // Generic behavior...
   closeWindowWhenFinished,
   clickNextButton,
-
-  // Fields' elements...
-  elements,
-
-  // Use first item to detect page ready status...
-  testXPath,
-
   // Target site url
   siteUrl,
-
   // Set window size
   windowWidth,
   windowHeight,
-
   // Behavior options...
   defaultClick,
   defaultClear,
   attemptsToFillComplexAddress,
 } = require('./config.js');
-
+const {
+  // Fields' elements...
+  elementsDescription,
+  // Use first item to detect page ready status...
+  testXPath,
+} = require('./elements-description.js');
 const {
   waitPromise,
   scrollToElement,
@@ -38,14 +33,19 @@ const {
   clickRadioGroupItem,
   debugHighlightElement,
   generateRandomAddressCode,
+  generateRandomPassword,
   // generateRandomPassword,
 } = require('./utils.js'); // Some utils (unused)
-
-const { loadAttributesList, loadDataList } = require('./data-files-support.js');
+const {
+  loadAttributesList,
+  loadDataList,
+  writeAttributesList,
+  writeDataFile,
+} = require('./data-files-support.js');
 const { prepareDataFieldValue } = require('./data-helpers.js');
 
 async function processDataFieldByXPath(driver, dataId, xPath, value) {
-  const elData = elements[dataId];
+  const elData = elementsDescription[dataId];
   const { click, clear, optional } = elData;
   try {
     const preparedValue = prepareDataFieldValue(dataId, value);
@@ -85,7 +85,7 @@ async function processDataFieldByXPath(driver, dataId, xPath, value) {
 
 async function processDataField(driver, dataId, value) {
   try {
-    const elData = elements[dataId];
+    const elData = elementsDescription[dataId];
     const xPath = elData.xPath;
     if (!xPath) {
       throw new Error('Not defined xpath for data id "' + dataId + '"');
@@ -374,7 +374,7 @@ async function processRecord(dataItem) {
     await atRecordProcessingStart(driver, dataItem);
     console.log('[processRecord] Starting to fill the data...');
     // Start to fill the fields (synchronous)...
-    for (const dataId of Object.keys(elements)) {
+    for (const dataId of Object.keys(elementsDescription)) {
       const value = dataItem[dataId] || '';
       await processDataField(driver, dataId, value);
     }
@@ -398,27 +398,69 @@ async function processData() {
   try {
     // Load emails and passwords
     const attrsList = loadAttributesList();
-    // Load data file. Expecting scheme `{ list: [ ... ] } `
+    if (!Array.isArray(attrsList)) {
+      throw new Error('Not found attributes list');
+    }
+    // Load data file. Expecting scheme `{ records: [ ... ] } `
     // const fileData = require(dataFileName);
-    const dataList = loadDataList(); //fileData.list;
+    const dataList = loadDataList(); //fileData.records;
+    if (!Array.isArray(dataList)) {
+      throw new Error('Not found data records');
+    }
     console.log('[processData] Start', {
       attrsList,
       dataList,
     });
-    debugger;
     // Option 1: Synchornous processing (item after item)...
-    for (const dataItem of dataList) {
-      // TODO: Skip records with filled SuperMember field
-      // const attrNo = Math.floor(Math.random() * attrsList.length);
-      // const attrData = attrsList[attrNo];
+    for (let dataNo = 0; dataNo < dataList.length; dataNo++) {
+      const dataItemOrig = dataList[dataNo];
+      // TODO: Skip records with filled SuperMember field (and other 'Super' fields?)
+      // Find random attribute record...
+      if (!attrsList.length) {
+        throw new Error('No available attribute records found!');
+      }
+      // Generate random attributes item number to use....
+      const attrsNo = Math.floor(Math.random() * attrsList.length);
+      // Get attrs item and remove it from the list...
+      const attrsItem = attrsList.splice(attrsNo, 1)[0];
+      // Fetch parameteres and construct data object...
+      const [Super_Email, Super_Email_Password] = attrsItem;
+      const Super_Password = generateRandomPassword();
+      const attrsData = {
+        Super_Email,
+        Super_Email_Password,
+        Super_Password,
+      };
+      // Combine all data into one object...
+      const dataItem = { ...dataItemOrig, ...attrsData };
+      console.log('[processData] Start iteration', {
+        dataNo,
+        attrsNo,
+        // dataItemOrig,
+        dataItem,
+        attrsData,
+        // attrsItem,
+      });
+      // Start main job: open page and fill all the form data...
       await processRecord(dataItem);
+      // Update data record in list...
+      dataList[dataNo] = dataItem;
+      // Update data files...
+      console.log('[processData] Updating data', {
+        attrsNo,
+        dataNo,
+        // dataItem,
+        // attrsData,
+        // attrsList,
+        // dataList,
+      });
+      writeAttributesList(attrsList);
+      writeDataFile(dataList);
     }
-    /* // Option 2: Asynchornous processing (all the browsers starting at once)...
-     * dataList.forEach(processRecord);
-     */
   } catch (err) {
     console.error('[processData] Error:', err);
     debugger; // eslint-disable-line no-debugger
+    // Top program level: don't throw nothing!
   }
 }
 

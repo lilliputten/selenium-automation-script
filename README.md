@@ -1,11 +1,11 @@
 <!--
 @since 2023.07.15, 00:00
-@changed 2023.07.17, 01:53
+@changed 2023.07.17, 02:31
 -->
 
 # selenium-automation-script
 
-Sample selenium automation script.
+Selenium automation script for automatically filling website forms.
 
 
 ## Run
@@ -24,11 +24,11 @@ Code: `src/routines.js`.
 
 Configuration data stored in `src/config.js`.
 
-- dataFileName (`data/data.json`): Json data file. Expecting scheme `{ list: [ ... ] } `.
+- dataFileName (`data/data.json`): Json data file. Expecting scheme `{ records: [ ... ] } `.
 - attributesFileName (`data/attributes.txt`): Attributes data file. Expecting line format: `<email>|<password>`.
 - siteUrl (`'https://mol.hostplus.com.au/mjol'`): Target site url.
 - windowWidth (800), windowHeight (600): Window size.
-- elements: The list of XPath matchers for fields in data file (format: `{ [<fieldId>]: { xPath: <xpathQuery> } }`).
+- elementsDescription: The list of XPath matchers for fields in data file (format: `{ [<fieldId>]: { xPath: <xpathQuery> } }`).
 - testXPath: XPath for element used to detect page loaded status (by default is the first value from `elementsXPaths`).
 
 See `src/config.js` for all parameters.
@@ -41,5 +41,5 @@ You should put your own files before start work.
 
 See `.SAMPLE` files for format reference (those files used for tests).
 
-- `data/data.json`: Main records list. Expecting dile scheme: `{ list: [ ... ] } `. See `data/data.json.SAMPLE`.
+- `data/data.json`: Main records list. Expecting dile scheme: `{ records: [ ... ] } `. See `data/data.json.SAMPLE`.
 - `data/attributes.txt`: Attributes data file. Contains extra data for random fileds filling. Expecting line format: `<email>|<password>`. See `data/attributes.txt.SAMPLE`.

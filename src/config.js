@@ -1,47 +1,48 @@
+const path = require('path');
+
 // DEBUG: Debug mode (only for developing purposes)
 const isDebug = true;
 
-// XPath matchers for fields...
+// const tagFormat = 'yyMMdd-HHmm';
+// const timeFormat = 'yyyy.MM.dd, HH:mm zzz'; // With time zone
+
+const srcPath = path.resolve(__dirname);
+const rootPath = path.resolve(path.dirname(path.basename(srcPath)));
+
+// XPath matchers for regular fields (processing all at once)...
 const elements = {
   cFirstName: {
     // 'FRANCISKO BAREND'
-    xPath: '//input[contains(@id, ".first-name")]',
+    xPath: '//input[contains(@id,".first-name")]',
   },
   /* // XXX
    */
   cSurname: {
     // 'DU PLESSIS'
-    xPath: '//input[contains(@id, ".last-name")]',
+    xPath: '//input[contains(@id,".last-name")]',
   },
   dDateOfBirth: {
     // '1957-12-18' -> '18/12/1957' (see `prepareDataValue` function below)
-    xPath: '//input[contains(@id, ".date-of-birth")]',
+    xPath: '//input[contains(@id,".date-of-birth")]',
   },
   cTelephone2: {
     // '0472880786' -> '472880786' (remove leading zero in prepareDataValue)
-    xPath: '//input[starts-with(@class, "form-control") and @type="tel"]',
+    xPath: '//input[starts-with(@class,"form-control") and @type="tel"]',
     // clear: true,
   },
   cTFN: {
     // '892763917'
-    xPath: '//input[contains(@id, ".tfn-prompt")]',
+    xPath: '//input[contains(@id,".tfn-prompt")]',
     clear: true,
   },
   Email: {
     // 'email@domain.com'
     xPath: [
-      '//input[contains(@id, ".email-address")]',
-      '//input[contains(@id, ".confirm-email-address")]',
+      '//input[contains(@id,".email-address")]',
+      '//input[contains(@id,".confirm-email-address")]',
     ],
   },
   /* // UNUSED: Address data, used complex method `fillComplexAddress`
-  <input autocapitalize="none" autocomplete="off" autocorrect="off"
-    id="postalAddress-AddressAutocomplete" spellcheck="false" tabindex="0"
-    type="text" aria-autocomplete="list" style="box-sizing: content-box; width:
-    2px; background: 0px center; border: 0px none; font-size: inherit; opacity:
-    1; outline: 0px; padding: 0px; color: inherit;" value="">
-  586 Stockleigh Road Stockleigh
-
   cPostCode: {
     // '4207'
     xPath: '//input[@name="postalAddress.postCode"]',
@@ -55,25 +56,24 @@ const elements = {
     // 'Eagleby'
     xPath: '//input[@name="postalAddress.addressLine2"]',
   },
-  */
-  /* // NOTE: Unused fields:
+  // Other data:
   ACCNUM: {
     // 'HASTOBE9DIGITS'
-    xPath: '//input[contains(@id, ".")]',
+    xPath: '//input[contains(@id,".")]',
   },
   AdressOnATO: {
     // 'need to save'
-    xPath: '//input[contains(@id, ".")]',
+    xPath: '//input[contains(@id,".")]',
   },
   SuperMember: {
     // 'id'
-    xPath: '//input[contains(@id, ".")]',
+    xPath: '//input[contains(@id,".")]',
   },
   */
 };
 
 // First random element's xpath (to detect document readyness status)...
-const testXPath = Object.values(elements)[0]?.xPath || '//input[contains(@id, ".first-name")]';
+const testXPath = Object.values(elements)[0]?.xPath || '//input[contains(@id,".first-name")]';
 
 module.exports = {
   // DEBUG: Debug mode (only for developing purposes)
@@ -84,14 +84,24 @@ module.exports = {
   closeWindowWhenFinished: !isDebug, // Don't close browser window with filled form
   clickNextButton: !isDebug, // Click 'Next' button when form has filled
 
+  // Paths...
+  srcPath,
+  rootPath,
+
   // XPath matchers for fields...
   elements,
 
   // XPath of item to detect page ready status...
   testXPath,
 
+  // Length of genreated passwords...
+  passwordLength: 10,
+
   // Json data file. Expecting scheme `{ list: [ ... ] } `
-  dataFileName: './data1.json',
+  dataFileName: 'data/data.json',
+
+  // Text file with emails and passwords name
+  attributesFileName: 'data/attributes.txt',
 
   // Target site url
   siteUrl: 'https://mol.hostplus.com.au/mjol',

@@ -3,16 +3,6 @@
 const { Key, Builder, Browser, By } = require('selenium-webdriver');
 
 const {
-  waitPromise,
-  scrollToElement,
-  clickCheckbox,
-  setSelect,
-  clickRadioGroupItem,
-  debugHighlightElement,
-  getRandomAddressValue,
-} = require('./utils.js'); // Some utils (unused)
-
-const {
   // Debug mode
   // isDebug,
   debugOmitOtherFields,
@@ -27,9 +17,6 @@ const {
   // Use first item to detect page ready status...
   testXPath,
 
-  // Json data file. Expecting scheme `{ list: [ ... ] } `
-  dataFileName,
-
   // Target site url
   siteUrl,
 
@@ -43,31 +30,25 @@ const {
   attemptsToFillComplexAddress,
 } = require('./config.js');
 
-function prepareDataValue(dataId, value) {
-  // dDateOfBirth should be reverted: '1957-12-18' -> '18-12-1957',
-  switch (dataId) {
-    case 'dDateOfBirth': {
-      // TODO: To use split and reverse array?
-      return value.replace(/^(\d+)-(\d+)-(\d+)$/, '$3/$2/$1');
-    }
-    case 'cTelephone2': {
-      const telStr = String(value);
-      // NOTE: Remove leading zero for domestic australian numbers...
-      // @see https://en.wikipedia.org/wiki/Telephone_numbers_in_Australia
-      if (telStr.length === 10 && telStr.startsWith('04')) {
-        return telStr.substring(1);
-      }
-      break;
-    }
-  }
-  return value;
-}
+const {
+  waitPromise,
+  scrollToElement,
+  clickCheckbox,
+  setSelect,
+  clickRadioGroupItem,
+  debugHighlightElement,
+  generateRandomAddressCode,
+  // generateRandomPassword,
+} = require('./utils.js'); // Some utils (unused)
+
+const { loadAttributesList, loadDataList } = require('./data-files-support.js');
+const { prepareDataFieldValue } = require('./data-helpers.js');
 
 async function processDataFieldByXPath(driver, dataId, xPath, value) {
   const elData = elements[dataId];
   const { click, clear, optional } = elData;
   try {
-    const preparedValue = prepareDataValue(dataId, value);
+    const preparedValue = prepareDataFieldValue(dataId, value);
     const valueLogStr =
       '"' + value + '"' + (preparedValue !== value ? ' ("' + preparedValue + '")' : '');
     // prettier-ignore
@@ -247,13 +228,13 @@ async function fillComplexAddress(driver, dataItem) {
     });
     // Starting filling cycle: using real value for iteration and then if
     // adrress couldn't be substituted automatically, will try to fill with
-    // random 'addresses' (see `getRandomAddressValue`).
+    // random 'addresses' (see `generateRandomAddressCode`).
     let count = 0;
     let result = false;
     while (!result && count < attemptsToFillComplexAddress) {
       if (count) {
         // Not initial cycle: get random value
-        value = getRandomAddressValue();
+        value = generateRandomAddressCode();
       }
       count++;
       console.log('[fillComplexAddress] Start iteration', count, '("' + value + '")');
@@ -415,11 +396,21 @@ async function processRecord(dataItem) {
 
 async function processData() {
   try {
+    // Load emails and passwords
+    const attrsList = loadAttributesList();
     // Load data file. Expecting scheme `{ list: [ ... ] } `
-    const fileData = require(dataFileName);
-    const dataList = fileData.list;
+    // const fileData = require(dataFileName);
+    const dataList = loadDataList(); //fileData.list;
+    console.log('[processData] Start', {
+      attrsList,
+      dataList,
+    });
+    debugger;
     // Option 1: Synchornous processing (item after item)...
     for (const dataItem of dataList) {
+      // TODO: Skip records with filled SuperMember field
+      // const attrNo = Math.floor(Math.random() * attrsList.length);
+      // const attrData = attrsList[attrNo];
       await processRecord(dataItem);
     }
     /* // Option 2: Asynchornous processing (all the browsers starting at once)...

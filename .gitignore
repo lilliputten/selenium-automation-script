@@ -7,6 +7,10 @@
 .pnp.js
 .gitmodules
 
+# data files
+data/data.json
+data/attributes.txt
+
 # misc
 .DS_Store
 *.pem

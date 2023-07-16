@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 const { By } = require('selenium-webdriver');
+const { passwordLength } = require('./config');
 
 async function waitPromise(timeout) {
   // Other soultion: `driver.manage().timeouts().implicitlyWait(30, TimeUnit.SECONDS);`
@@ -98,12 +99,51 @@ async function debugHighlightElement(driver, el, color = 'red', width = 2) {
 /** Get 5 random digits (in string), values from 10000 to 99999.
  * @return string
  */
-function getRandomAddressValue() {
+function generateRandomAddressCode() {
   const numMin = 10000;
   const numMax = 99999;
   const numRange = numMax - numMin;
   const randValue = numMin + Math.round(Math.random() * numRange);
   return String(randValue);
+}
+
+function generateRandomPassword() {
+  const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz'; // Available lowercase characters
+  const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // Available uppercase characters
+  const numbers = '0123456789'; // Available numbers
+
+  // Generate a random lowercase letter
+  function getRandomLowercase() {
+    return lowercaseChars.charAt(Math.floor(Math.random() * lowercaseChars.length));
+  }
+
+  // Generate a random uppercase letter
+  function getRandomUppercase() {
+    return uppercaseChars.charAt(Math.floor(Math.random() * uppercaseChars.length));
+  }
+
+  // Generate a random number
+  function getRandomNumber() {
+    return numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+
+  // Generate remaining random characters
+  function getRandomCharacter() {
+    const characters = lowercaseChars + uppercaseChars + numbers;
+    return characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+
+  let password =
+    getRandomLowercase() + // Start with a lowercase letter
+    getRandomUppercase() + // Add an uppercase letter
+    getRandomNumber(); // Add a number
+
+  // Fill the remaining characters
+  for (let i = 0; i < passwordLength - password.length; i++) {
+    password += getRandomCharacter();
+  }
+
+  return password;
 }
 
 module.exports = {
@@ -113,5 +153,6 @@ module.exports = {
   setSelect,
   clickRadioGroupItem,
   debugHighlightElement,
-  getRandomAddressValue,
+  generateRandomAddressCode,
+  generateRandomPassword,
 };
